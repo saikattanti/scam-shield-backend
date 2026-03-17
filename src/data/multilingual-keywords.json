@@ -1,0 +1,133 @@
+{
+  "suspiciousKeywords": {
+    "english": [
+      "blocked", "suspended", "kyc", "pan card", "aadhaar", "lottery", "winner",
+      "inheritance", "tax refund", "verify account", "unauthorized", "debit",
+      "urgent", "immediate", "click now", "act now", "expire", "limited time",
+      "suspended", "locked", "frozen", "claim", "prize", "reward", "congratulations"
+    ],
+    "hindi": [
+      "ब्लॉक", "निलंबित", "केवाईसी", "पैन कार्ड", "आधार", "लॉटरी", "विजेता",
+      "तुरंत", "अभी", "क्लिक करें", "सत्यापन", "खाता", "बंद", "समाप्त",
+      "पुरस्कार", "इनाम", "बधाई", "चयनित", "जीत", "धोखाधड़ी"
+    ],
+    "tamil": [
+      "தடுக்கப்பட்டது", "இடைநிறுத்தப்பட்டது", "கேவைசி", "பான் கார்டு", "ஆதார்", "லாட்டரி", "வென்றவர்",
+      "உடனடியாக", "இப்போது", "கிளிக் செய்யவும்", "சரிபார்ப்பு", "கணக்கு", "மூடப்பட்டது", "காலாவதி",
+      "பரிசு", "வெகுமதி", "வாழ்த்துக்கள்", "தேர்ந்தெடுக்கப்பட்டது", "வெற்றி", "மோசடி"
+    ],
+    "telugu": [
+      "బ్లాక్ చేయబడింది", "సస్పెండ్ చేయబడింది", "కెవైసీ", "పాన్ కార్డ్", "ఆధార్", "లాటరీ", "విజేత",
+      "వెంటనే", "ఇప్పుడు", "క్లిక్ చేయండి", "ధృవీకరణ", "ఖాతా", "మూసివేయబడింది", "గడువు ముగిసింది",
+      "బహుమతి", "రివార్డ్", "అభినందనలు", "ఎంపిక చేయబడింది", "గెలుపు", "మోసం"
+    ]
+  },
+  "bankingTerms": {
+    "english": ["bank", "upi", "paytm", "phonepe", "gpay", "account", "card", "pin", "otp", "cvv"],
+    "hindi": ["बैंक", "यूपीआई", "पेटीएम", "फोनपे", "जीपे", "खाता", "कार्ड", "पिन", "ओटीपी"],
+    "tamil": ["வங்கி", "யுபிஐ", "பேடிஎம்", "போன்பே", "ஜிபே", "கணக்கு", "கார்டு", "பின்", "ஓடிபி"],
+    "telugu": ["బ్యాంక్", "యుపిఐ", "పేటీఎం", "ఫోన్‌పే", "జిపే", "ఖాతా", "కార్డ్", "పిన్", "ఓటీపీ"]
+  },
+  "urgencyPatterns": {
+    "english": ["urgent", "immediate", "now", "today", "within 24 hours", "expires soon", "act fast"],
+    "hindi": ["तुरंत", "अभी", "आज", "24 घंटे में", "जल्दी करें", "समाप्त हो रहा है"],
+    "tamil": ["உடனடி", "இப்போது", "இன்று", "24 மணி நேரத்தில்", "விரைவாக", "காலாவதியாகிறது"],
+    "telugu": ["త్వరగా", "ఇప్పుడు", "ఈరోజు", "24 గంటల్లో", "త్వరగా చేయండి", "గడువు ముగుస్తోంది"]
+  },
+  "requestPatterns": {
+    "english": ["send", "share", "provide", "submit", "enter", "give", "reveal"],
+    "hindi": ["भेजें", "साझा करें", "प्रदान करें", "जमा करें", "दर्ज करें", "दें"],
+    "tamil": ["அனுப்பு", "பகிர்", "வழங்கு", "சமர்ப்பி", "உள்ளிடு", "கொடு"],
+    "telugu": ["పంపండి", "షేర్ చేయండి", "అందించండి", "సమర్పించండి", "నమోదు చేయండి", "ఇవ్వండి"]
+  },
+  "scamCategories": {
+    "english": {
+      "UPI_Banking_Fraud": "UPI/Banking Fraud",
+      "KYC_Scam": "KYC Update Scam",
+      "Job_Scam": "Job/Employment Scam",
+      "Lottery_Prize_Scam": "Lottery/Prize Scam",
+      "Phishing_Identity_Theft": "Phishing/Identity Theft",
+      "Impersonation_Scam": "Authority Impersonation",
+      "Romance_Relationship_Scam": "Romance/Relationship Scam",
+      "Legitimate": "Legitimate Message"
+    },
+    "hindi": {
+      "UPI_Banking_Fraud": "यूपीआई/बैंकिंग धोखाधड़ी",
+      "KYC_Scam": "केवाईसी अपडेट घोटाला",
+      "Job_Scam": "नौकरी घोटाला",
+      "Lottery_Prize_Scam": "लॉटरी/पुरस्कार घोटाला",
+      "Phishing_Identity_Theft": "फिशिंग/पहचान की चोरी",
+      "Impersonation_Scam": "प्राधिकरण प्रतिरूपण",
+      "Romance_Relationship_Scam": "रोमांस घोटाला",
+      "Legitimate": "वैध संदेश"
+    },
+    "tamil": {
+      "UPI_Banking_Fraud": "யுபிஐ/வங்கி மோசடி",
+      "KYC_Scam": "கேவைசி மோசடி",
+      "Job_Scam": "வேலை மோசடி",
+      "Lottery_Prize_Scam": "லாட்டரி/பரிசு மோசடி",
+      "Phishing_Identity_Theft": "ஃபிஷிங்/அடையாள திருட்டு",
+      "Impersonation_Scam": "அதிகாரம் ஆள்மாறாட்டம்",
+      "Romance_Relationship_Scam": "காதல் மோசடி",
+      "Legitimate": "சட்டபூர்வமான செய்தி"
+    },
+    "telugu": {
+      "UPI_Banking_Fraud": "యుపిఐ/బ్యాంకింగ్ మోసం",
+      "KYC_Scam": "కెవైసీ మోసం",
+      "Job_Scam": "ఉద్యోగ మోసం",
+      "Lottery_Prize_Scam": "లాటరీ/బహుమతి మోసం",
+      "Phishing_Identity_Theft": "ఫిషింగ్/గుర్తింపు దొంగతనం",
+      "Impersonation_Scam": "అధికారం మోసం",
+      "Romance_Relationship_Scam": "ప్రేమ మోసం",
+      "Legitimate": "చట్టబద్ధమైన సందేశం"
+    }
+  },
+  "riskLevels": {
+    "english": {
+      "Critical": "Critical Risk",
+      "High": "High Risk",
+      "Medium": "Medium Risk",
+      "Low": "Low Risk"
+    },
+    "hindi": {
+      "Critical": "गंभीर जोखिम",
+      "High": "उच्च जोखिम",
+      "Medium": "मध्यम जोखिम",
+      "Low": "कम जोखिम"
+    },
+    "tamil": {
+      "Critical": "முக்கிய ஆபத்து",
+      "High": "உயர் ஆபத்து",
+      "Medium": "நடுத்தர ஆபத்து",
+      "Low": "குறைந்த ஆபத்து"
+    },
+    "telugu": {
+      "Critical": "క్లిష్టమైన ప్రమాదం",
+      "High": "అధిక ప్రమాదం",
+      "Medium": "మధ్యస్థ ప్రమాదం",
+      "Low": "తక్కువ ప్రమాదం"
+    }
+  },
+  "recommendations": {
+    "english": {
+      "high": "Do NOT click any links. Block the sender immediately. Report this message to authorities.",
+      "medium": "Be cautious. Verify the source independently through official channels before taking any action.",
+      "low": "Seems safe, but always verify sender before clicking links or sharing information."
+    },
+    "hindi": {
+      "high": "किसी भी लिंक पर क्लिक न करें। प्रेषक को तुरंत ब्लॉक करें। अधिकारियों को इसकी रिपोर्ट करें।",
+      "medium": "सावधान रहें। कार्रवाई करने से पहले आधिकारिक चैनलों के माध्यम से स्रोत को स्वतंत्र रूप से सत्यापित करें।",
+      "low": "सुरक्षित लगता है, लेकिन लिंक पर क्लिक करने या जानकारी साझा करने से पहले हमेशा प्रेषक को सत्यापित करें।"
+    },
+    "tamil": {
+      "high": "எந்த இணைப்பையும் கிளிக் செய்ய வேண்டாம். அனுப்புநரை உடனடியாக தடுக்கவும். அதிகாரிகளுக்கு இதை புகாரளிக்கவும்.",
+      "medium": "எச்சரிக்கையாக இருங்கள். நடவடிக்கை எடுப்பதற்கு முன்பு அதிகாரப்பூர்வ வழிகள் மூலம் மூலத்தை சரிபார்க்கவும்.",
+      "low": "பாதுகாப்பானதாகத் தெரிகிறது, ஆனால் இணைப்புகளைக் கிளிக் செய்யும் முன் அல்லது தகவலைப் பகிர்வதற்கு முன் எப்போதும் அனுப்புநரைச் சரிபார்க்கவும்."
+    },
+    "telugu": {
+      "high": "ఏ లింక్‌లను క్లిక్ చేయవద్దు। పంపినవారిని వెంటనే బ్లాక్ చేయండి. అధికారులకు దీనిని నివేదించండి.",
+      "medium": "జాగ్రత్తగా ఉండండి. చర్య తీసుకునే ముందు అధికారిక మార్గాల ద్వారా మూలాన్ని స్వతంత్రంగా ధృవీకరించండి.",
+      "low": "సురక్షితంగా కనిపిస్తుంది, కానీ లింక్‌లను క్లిక్ చేయడానికి లేదా సమాచారాన్ని భాగస్వామ్యం చేయడానికి ముందు ఎల్లప్పుడూ పంపినవారిని ధృవీకరించండి."
+    }
+  }
+}

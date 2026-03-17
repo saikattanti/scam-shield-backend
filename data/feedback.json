@@ -1,0 +1,20 @@
+[
+  {
+    "id": "1768160055110",
+    "analysisId": "analysis_1768160050468_4tmhgfg3a",
+    "isAccurate": true,
+    "content": "Congratulations! You have won a lottery of Rs. 50,000. Pay Rs. 500 registration fee to claim now. Call 9999999999",
+    "predictedCategory": "Job_Scam",
+    "predictedScore": 84,
+    "timestamp": "2026-01-11T19:34:15.110Z"
+  },
+  {
+    "id": "1768160801856",
+    "analysisId": "analysis_1768160798278_3bms6h00w",
+    "isAccurate": true,
+    "content": "http://192.168.1.55/login/bank",
+    "predictedCategory": "Legitimate",
+    "predictedScore": 24,
+    "timestamp": "2026-01-11T19:46:41.856Z"
+  }
+]

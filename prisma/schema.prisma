@@ -1,0 +1,89 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model - supports both guest and authenticated users
+model User {
+  id            String      @id @default(uuid())
+  email         String?     @unique
+  passwordHash  String?
+  isGuest       Boolean     @default(true)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  
+  sessions      Session[]
+  analyses      Analysis[]
+  feedback      Feedback[]
+  
+  @@map("users")
+}
+
+// Session model - manages user sessions with expiration
+model Session {
+  id            String      @id @default(uuid())
+  userId        String
+  sessionKey    String      @unique
+  expiresAt     DateTime
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  analyses      Analysis[]
+  
+  @@index([sessionKey])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+// Analysis model - stores scam analysis results with privacy (hashed content)
+model Analysis {
+  id              String      @id @default(uuid())
+  userId          String
+  sessionId       String
+  contentHash     String      @db.VarChar(64) // SHA-256 hash
+  contentPreview  String      @db.Text // First 100 chars for context
+  analysisType    String      @default("text")
+  riskScore       Float
+  riskLevel       String
+  category        String
+  language        String      @default("en")
+  mlPowered       Boolean     @default(true)
+  aiConfidence    Float?
+  signals         Json?       // Store warning_signals array as JSON
+  createdAt       DateTime    @default(now())
+  
+  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session         Session     @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  feedback        Feedback[]
+  
+  @@index([contentHash])
+  @@index([createdAt])
+  @@index([userId])
+  @@map("analyses")
+}
+
+// Feedback model - stores user feedback on analysis accuracy
+model Feedback {
+  id            String      @id @default(uuid())
+  analysisId    String
+  userId        String
+  isAccurate    Boolean
+  comment       String?     @db.Text
+  createdAt     DateTime    @default(now())
+  
+  analysis      Analysis    @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([analysisId])
+  @@map("feedback")
+}
+
