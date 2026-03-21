@@ -2,7 +2,8 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const { analyzeInput, analyzeImage } = require('../services/scamDetector');
-const { getAISteps, getApproxLocation, shouldPersist } = require('../services/aiAdvisor');
+const { getAISteps, getApproxLocation, shouldPersist, getFIRDraft } = require('../services/aiAdvisor');
+const { getSmartActions } = require('../services/smartActions');
 const { transcribeAudio } = require('../services/audioScanner');
 const { addAnalysis } = require('./ticker');
 const { getPrismaClient } = require('../utils/prisma');
@@ -76,23 +77,29 @@ router.post('/', async (req, res) => {
     const { type, content, platform, amountLost } = req.body;
     if (!content) return res.status(400).json({ error: 'Content is required' });
 
+    const userCity = req.headers['x-user-city'] || null;
+
     // 1. Run ML + rule-based detection
     const result = await analyzeInput(type, content);
 
-    // 2. Get Gemini AI steps with context (runs in parallel-ish, non-blocking for response)
+    // 2. Get Gemini AI steps + Smart Actions in parallel
     let aiSteps = null;
+    let smartActions = null;
     if (['High', 'Critical', 'Medium'].includes(result.risk)) {
       const context = { platform, amountLost };
-      aiSteps = await getAISteps(result.category, result.signals, result.language, 'prevention', context);
+      [aiSteps, smartActions] = await Promise.all([
+        getAISteps(result.category, result.signals, result.language, 'prevention', context),
+        Promise.resolve(getSmartActions(result.category, result.signals, userCity, result.risk)),
+      ]);
     }
 
-    // 3. Privacy-first DB persist (only for confirmed High/Critical scams with keywords)
+    // 3. Privacy-first DB persist
     const analysisId = await maybePersistAnalysis({ content, result, type, aiSteps, req });
 
     // 4. Add to live ticker
     addAnalysis(result);
 
-    res.json({ ...result, analysisId, aiSteps });
+    res.json({ ...result, analysisId, aiSteps, smartActions });
   } catch (error) {
     console.error('Analysis error:', error);
     res.status(500).json({ error: 'Internal Server Error' });
@@ -104,26 +111,23 @@ router.post('/image', upload.single('image'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'Image is required' });
 
-    // Image is analyzed purely in memory — file is never written to disk
+    const userCity = req.headers['x-user-city'] || null;
     const result = await analyzeImage(req.file.buffer, req.file.originalname);
 
     let aiSteps = null;
+    let smartActions = null;
     if (['High', 'Critical', 'Medium'].includes(result.risk)) {
-      aiSteps = await getAISteps(result.category, result.signals, result.language, 'prevention');
+      [aiSteps, smartActions] = await Promise.all([
+        getAISteps(result.category, result.signals, result.language, 'prevention'),
+        Promise.resolve(getSmartActions(result.category, result.signals, userCity, result.risk)),
+      ]);
     }
 
-    // For images, use the extracted text (if any) for DB storage decision
     const textContent = result.extractedText || '';
-    const analysisId = await maybePersistAnalysis({
-      content: textContent,
-      result,
-      type: 'image',
-      aiSteps,
-      req,
-    });
+    const analysisId = await maybePersistAnalysis({ content: textContent, result, type: 'image', aiSteps, req });
 
     addAnalysis(result);
-    res.json({ ...result, analysisId, aiSteps });
+    res.json({ ...result, analysisId, aiSteps, smartActions });
   } catch (error) {
     console.error('Image analysis route error:', error);
     res.status(500).json({ error: 'Error analyzing image' });
@@ -181,6 +185,8 @@ router.post('/assist', upload.single('image'), async (req, res) => {
       return res.status(400).json({ error: 'Please describe your situation or upload a screenshot' });
     }
 
+    const userCity = req.headers['x-user-city'] || null;
+
     let contentToAnalyze = situation || '';
 
     // If image attached, extract text from it first
@@ -200,13 +206,22 @@ router.post('/assist', upload.single('image'), async (req, res) => {
       ? await analyzeInput('text', contentToAnalyze)
       : { category: 'General_Suspicious_Activity', signals: [], language: language || 'english', risk: 'High' };
 
-    // Generate detailed recovery steps using Gemini
-    const recoverySteps = await getAISteps(
-      detectionResult.category,
-      detectionResult.signals,
-      detectionResult.language || language || 'english',
-      'recovery'
-    );
+    // Generate detailed recovery steps, Smart Actions, and FIR Draft in parallel
+    const [recoverySteps, smartActions, firDraft] = await Promise.all([
+      getAISteps(
+        detectionResult.category,
+        detectionResult.signals,
+        detectionResult.language || language || 'english',
+        'recovery'
+      ),
+      Promise.resolve(getSmartActions(detectionResult.category, detectionResult.signals, userCity, detectionResult.risk)),
+      getFIRDraft(
+        detectionResult.category,
+        detectionResult.signals,
+        { amountLost, platform },
+        detectionResult.language || language || 'english'
+      )
+    ]);
 
     // Store the report (no raw content — only hash, category, approx location)
     try {
@@ -234,6 +249,8 @@ router.post('/assist', upload.single('image'), async (req, res) => {
       riskLevel: detectionResult.risk,
       detectedSignals: detectionResult.signals,
       recoverySteps,
+      smartActions,
+      firDraft,
       platform: platform || null,
     });
   } catch (error) {

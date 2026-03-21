@@ -52,8 +52,8 @@ const analyzeInput = async (type, content) => {
 
     // --- 1. AI Model Prediction (Primary) ---
     try {
-        const mlResponse = await axios.post('http://localhost:8000/predict', 
-            { text: content },
+        const mlResponse = await axios.post('http://localhost:8000/analyze', 
+            { text: content, language: detectedLanguage },
             { timeout: 5000 }
         );
         mlResult = mlResponse.data;
@@ -170,14 +170,11 @@ const analyzeInput = async (type, content) => {
     });
 
     // Deep Sandboxing 
-    let urlsToScan = [...urls];
     let urlMetadata = null;
-    if (type === 'url' && urlsToScan.length === 0) {
-        urlsToScan.push(content);
-    }
-    
-    if (urlsToScan.length > 0) {
-        const targetUrl = urlsToScan[0]; // Scan the first identified URL
+    // ONLY run the heavy Puppeteer/WHOIS deep sandbox if explicitly requesting URL scan!
+    // Never run it on raw text messages to prevent 1-minute timeout blocks.
+    if (type === 'url') {
+        let targetUrl = urls.length > 0 ? urls[0] : content;
         try {
             const deepScan = await deepAnalyzeUrl(targetUrl);
             if (deepScan.addedScore > 0) {
@@ -187,7 +184,6 @@ const analyzeInput = async (type, content) => {
             if (deepScan.newSignals.length > 0) {
                 signals.push(...deepScan.newSignals);
             }
-            // Expose URL metadata for the frontend intelligence card
             urlMetadata = deepScan.metadata || null;
         } catch (e) {
             console.error("Deep scan integration error:", e);

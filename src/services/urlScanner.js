@@ -6,12 +6,20 @@ const dns = require('dns').promises;
 // Promisify whois lookup
 const lookupWhois = (domain) => {
     return new Promise((resolve) => {
+        // Set a hard timeout for WHOIS lookups (usually the biggest bottleneck)
+        const timeout = setTimeout(() => {
+            console.log(`⚠️ WHOIS timeout for ${domain}`);
+            resolve(null);
+        }, 8000);
+
         try {
             whois.lookup(domain, (err, data) => {
+                clearTimeout(timeout);
                 if (err) return resolve(null);
                 resolve(data);
             });
         } catch (error) {
+            clearTimeout(timeout);
             resolve(null);
         }
     });
