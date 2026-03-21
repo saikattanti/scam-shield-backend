@@ -7,6 +7,7 @@ require('dotenv').config();
 const analyzeRoutes = require('./routes/analyze');
 const feedbackRoutes = require('./routes/feedback');
 const { router: tickerRoutes } = require('./routes/ticker');
+const mapRoutes = require('./routes/map');
 const { sessionMiddleware, cleanupExpiredSessions } = require('./middleware/session');
 
 const app = express();
@@ -25,6 +26,7 @@ app.use(sessionMiddleware);
 app.use('/api/analyze', analyzeRoutes);
 app.use('/api/feedback', feedbackRoutes);
 app.use('/api/ticker', tickerRoutes);
+app.use('/api/map', mapRoutes);
 
 // Health Check
 app.get('/', (req, res) => {

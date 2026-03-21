@@ -5,6 +5,8 @@
 const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
+const FormData = require('form-data');
+const { deepAnalyzeUrl } = require('./urlScanner');
 
 // Load multilingual keywords
 let multilingualKeywords = {};
@@ -19,12 +21,19 @@ try {
  * Detect language of input text
  */
 const detectLanguage = (text) => {
-    // Check for Devanagari script (Hindi)
-    if (/[\u0900-\u097F]/.test(text)) return 'hindi';
-    // Check for Tamil script
-    if (/[\u0B80-\u0BFF]/.test(text)) return 'tamil';
-    // Check for Telugu script
-    if (/[\u0C00-\u0C7F]/.test(text)) return 'telugu';
+    // Exclude digits and common punctuation from script detection to avoid OCR hallucinations
+    // Devanagari letters only (no digits \u0966-\u096f)
+    const hindiMatches = text.match(/[\u0904-\u0939\u0958-\u095F]/g);
+    if (hindiMatches && hindiMatches.length >= 2) return 'hindi';
+    
+    // Tamil letters only (no digits)
+    const tamilMatches = text.match(/[\u0B85-\u0BB9]/g);
+    if (tamilMatches && tamilMatches.length >= 2) return 'tamil';
+    
+    // Telugu letters only (no digits)
+    const teluguMatches = text.match(/[\u0C05-\u0C39]/g);
+    if (teluguMatches && teluguMatches.length >= 2) return 'telugu';
+    
     // Default to English
     return 'english';
 };
@@ -123,7 +132,7 @@ const analyzeInput = async (type, content) => {
         signals.push(`Urgency/pressure tactics detected in ${detectedLanguage}`);
     }
 
-    // --- 5. Link & Domain Analysis (Weight: 15) ---
+    // --- 5. Link & Domain Analysis (Weight: 15 / Or overrides if DeepScan) ---
     const urlRegex = /(https?:\/\/[^\s]+)/g;
     const urls = content.match(urlRegex) || [];
 
@@ -135,7 +144,9 @@ const analyzeInput = async (type, content) => {
     const ipUrlRegex = /https?:\/\/\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/;
 
     let linkRiskScore = 0;
+    let isDeepScanned = false;
 
+    // Static Rules
     urls.forEach(url => {
         if (ipUrlRegex.test(url)) {
             linkRiskScore += 10;
@@ -143,12 +154,12 @@ const analyzeInput = async (type, content) => {
         }
 
         if (suspiciousDomains.some(d => url.includes(d))) {
-            linkRiskScore += 8;
+            linkRiskScore += 15;
             signals.push("⚠️ URL shortener detected (hides actual destination)");
         }
         
         if (typosquattingPatterns.some(pattern => url.includes(pattern))) {
-            linkRiskScore += 12;
+            linkRiskScore += 30;
             signals.push("🚨 Typosquatting domain detected (fake bank website)");
         }
 
@@ -158,7 +169,35 @@ const analyzeInput = async (type, content) => {
         }
     });
 
-    score += Math.min(linkRiskScore, 15);
+    // Deep Sandboxing 
+    let urlsToScan = [...urls];
+    if (type === 'url' && urlsToScan.length === 0) {
+        urlsToScan.push(content);
+    }
+    
+    if (urlsToScan.length > 0) {
+        const targetUrl = urlsToScan[0]; // Scan the first identified URL
+        try {
+            const deepScan = await deepAnalyzeUrl(targetUrl);
+            if (deepScan.addedScore > 0) {
+                linkRiskScore += deepScan.addedScore;
+                isDeepScanned = true;
+            }
+            if (deepScan.newSignals.length > 0) {
+                signals.push(...deepScan.newSignals);
+            }
+        } catch (e) {
+            console.error("Deep scan integration error:", e);
+        }
+    }
+
+    if (isDeepScanned || type === 'url') {
+        // Cap higher if definitively deep scanned or explicitly requested URL analysis
+        score += Math.min(linkRiskScore, 80); 
+    } else {
+        // Keep regex caps low for text containing links
+        score += Math.min(linkRiskScore, 15);
+    }
 
 
     // --- 6. Formatting & Anomalies (Weight: 5) ---
@@ -186,6 +225,11 @@ const analyzeInput = async (type, content) => {
 
     // Get category from ML or determine from signals
     const category = mlResult?.scam_category || determineCategory(signals, lowerContent, mlResult);
+    
+    // Override category if deep scan picked up severe phishing
+    if (isDeepScanned && linkRiskScore > 40) {
+        risk = "Critical";
+    }
 
     // Get appropriate recommendation based on language
     const recommendations = multilingualKeywords.recommendations?.[detectedLanguage] || 
@@ -234,4 +278,59 @@ const determineCategory = (signals, text, mlResult) => {
     return 'General_Suspicious_Activity';
 };
 
-module.exports = { analyzeInput };
+const analyzeImage = async (buffer, originalname) => {
+    console.log(`Analyzing Image: ${originalname}`);
+    
+    try {
+        const form = new FormData();
+        form.append('file', buffer, {
+            filename: originalname,
+            contentType: 'image/jpeg', // Default, multer will provide actual
+        });
+
+        const mlResponse = await axios.post('http://localhost:8000/analyze-image', form, {
+            headers: {
+                ...form.getHeaders(),
+            },
+            timeout: 10000
+        });
+
+        const mlResult = mlResponse.data;
+        console.log("ML Image Analysis:", mlResult);
+
+        // Process the result through the same logic as text if text was extracted
+        if (mlResult.extracted_text) {
+            const finalResult = await analyzeInput('text', mlResult.extracted_text);
+            // Append that this was an image scan
+            finalResult.analysisType = 'image';
+            finalResult.extractedText = mlResult.extracted_text;
+            return finalResult;
+        }
+
+        return {
+            score: 0,
+            risk: "Low",
+            category: "Legitimate",
+            signals: ["No text detected in image"],
+            recommendation: "Seems safe.",
+            language: "english",
+            mlPowered: true,
+            analysisType: 'image'
+        };
+
+    } catch (error) {
+        console.error("Image ML Service error:", error.message);
+        return {
+            score: 50,
+            risk: "High",
+            category: "General_Suspicious_Activity",
+            signals: ["AI Service failed during image analysis"],
+            recommendation: "Manual verification required.",
+            language: "unknown",
+            mlPowered: false,
+            analysisType: 'image'
+        };
+    }
+};
+
+module.exports = { analyzeInput, analyzeImage };

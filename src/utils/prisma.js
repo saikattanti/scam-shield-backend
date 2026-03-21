@@ -1,8 +1,5 @@
 // Prisma client configuration for Neon PostgreSQL (Prisma v5)
 const { PrismaClient } = require('@prisma/client');
-const { PrismaNeon } = require('@prisma/adapter-neon');
-const { Pool } = require('@neondatabase/serverless');
-const ws = require('ws');
 
 let prisma;
 
@@ -16,17 +13,12 @@ function getPrismaClient() {
       throw new Error('DATABASE_URL is not defined in environment variables');
     }
 
-    console.log('Initializing Prisma v5 with DATABASE_URL:', connectionString.substring(0, 50) + '...');
+    console.log('Initializing standard Prisma Client with DATABASE_URL...');
     
     try {
-      // Create the pool with the connection string
-      const pool = new Pool({ connectionString });
-      
-      // Create the adapter with the pool and WebSocket
-      const adapter = new PrismaNeon(pool, { webSocketConstructor: ws });
-
+      // Use standard Prisma over HTTP/TCP instead of the Edge Websocket adapter 
+      // preventing ErrorEvent timeouts locally.
       prisma = new PrismaClient({
-        adapter,
         log: ['error', 'warn'],
       });
       
