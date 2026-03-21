@@ -171,6 +171,7 @@ const analyzeInput = async (type, content) => {
 
     // Deep Sandboxing 
     let urlsToScan = [...urls];
+    let urlMetadata = null;
     if (type === 'url' && urlsToScan.length === 0) {
         urlsToScan.push(content);
     }
@@ -186,6 +187,8 @@ const analyzeInput = async (type, content) => {
             if (deepScan.newSignals.length > 0) {
                 signals.push(...deepScan.newSignals);
             }
+            // Expose URL metadata for the frontend intelligence card
+            urlMetadata = deepScan.metadata || null;
         } catch (e) {
             console.error("Deep scan integration error:", e);
         }
@@ -252,7 +255,8 @@ const analyzeInput = async (type, content) => {
         recommendation,
         language: detectedLanguage,
         mlPowered: mlResult !== null,
-        aiConfidence: mlResult?.confidence_score || null
+        aiConfidence: mlResult?.confidence_score || null,
+        urlMetadata: urlMetadata || undefined,
     };
 };
 

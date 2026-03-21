@@ -8,6 +8,7 @@ const analyzeRoutes = require('./routes/analyze');
 const feedbackRoutes = require('./routes/feedback');
 const { router: tickerRoutes } = require('./routes/ticker');
 const mapRoutes = require('./routes/map');
+const timelineRoutes = require('./routes/timeline');
 const { sessionMiddleware, cleanupExpiredSessions } = require('./middleware/session');
 
 const app = express();
@@ -27,6 +28,7 @@ app.use('/api/analyze', analyzeRoutes);
 app.use('/api/feedback', feedbackRoutes);
 app.use('/api/ticker', tickerRoutes);
 app.use('/api/map', mapRoutes);
+app.use('/api/timeline', timelineRoutes);
 
 // Health Check
 app.get('/', (req, res) => {

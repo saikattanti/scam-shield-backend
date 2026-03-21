@@ -37,56 +37,81 @@ const PLATFORM_SUPPORT = {
 };
 
 /**
- * Build the Gemini prompt from scam context
+ * Build the structured Gemini prompt from scam context
  */
-const buildPrompt = (category, signals, language, mode = 'prevention') => {
+const buildPrompt = (category, signals, language, mode = 'prevention', context = {}) => {
   const platformInfo = PLATFORM_SUPPORT[category] || PLATFORM_SUPPORT.General_Suspicious_Activity;
-  const signalList = signals.slice(0, 5).join('\n- ');
+  const signalList = signals.slice(0, 6).join('\n- ');
+  const langInstruction = language === 'hindi' ? 'Hindi (Devanagari script)' : 
+                          language === 'tamil' ? 'Tamil script' : 'simple English';
   
   const platformContext = platformInfo.authorities.length > 0
-    ? `\nRelevant Indian helplines/platforms:\n- ${[...platformInfo.numbers, ...platformInfo.authorities].join('\n- ')}`
+    ? `\nRelevant Indian resources:\n- ${[...platformInfo.numbers, ...platformInfo.authorities].join('\n- ')}`
+    : '';
+
+  const financialContext = context.amountLost 
+    ? `\nFinancial Exposure: ₹${context.amountLost} at risk` : '';
+  const platformUsed = context.platform 
+    ? `\nPlatform Used: ${context.platform}` : '';
+  const timeContext = context.hoursSince !== undefined 
+    ? `\nTime Since Incident: ${context.hoursSince < 24 ? `${context.hoursSince} hours ago — URGENT` : `${Math.floor(context.hoursSince/24)} days ago`}`
     : '';
 
   if (mode === 'recovery') {
-    return `You are ScamShield, an AI assistant helping Indian scam victims. A user says they were scammed.
+    return `You are ScamShield, India's #1 AI scam recovery assistant. A victim needs URGENT help.
 
-Scam Type: ${category.replace(/_/g, ' ')}
-Detected Signals:
-- ${signalList}
+SCAM CONTEXT:
+- Scam Type: ${category.replace(/_/g, ' ')}
+- Detected Signals:
+  - ${signalList}${financialContext}${platformUsed}${timeContext}
 ${platformContext}
 
-Generate exactly 5 clear, numbered recovery steps in ${language === 'hindi' ? 'Hindi (Devanagari script)' : language === 'tamil' ? 'Tamil script' : 'simple English'}.
-Steps must be specific to India, mention exact helpline numbers, and be actionable within 24 hours.
-Format: You MUST provide EXACTLY 5 distinct steps. Each step must start with a number and a period (e.g., 1., 2.) and be on its OWN NEW LINE.
-1. [First Step]
-2. [Second Step]
-3. [Third Step]
-4. [Fourth Step]
-5. [Fifth Step]
-Keep each step under 2 sentences. No headers. No markdown. No introductory text. Just the 5 steps.`;
+Generate exactly 5 clear, numbered recovery steps in ${langInstruction}.
+Steps must be India-specific, time-sensitive, and actionable RIGHT NOW.
+Mention exact helpline numbers, official URLs (cybercrime.gov.in), bank chargeback steps.
+
+CRITICAL FORMAT RULES:
+- EXACTLY 5 steps, each on its OWN NEW LINE
+- Start each with the number and period: 1. 2. 3. etc.
+- Maximum 2 sentences per step
+- No markdown headers, no bold, no intro text
+- Include 1930 helpline and cybercrime.gov.in in steps
+
+1. [Immediate action — do within next 60 minutes]
+2. [Bank/UPI fraud block steps]
+3. [Official complaint filing]
+4. [Evidence collection]
+5. [Future prevention]`;
   }
 
-  return `You are ScamShield, an AI safety assistant for Indian users.
+  return `You are ScamShield, India's AI scam safety assistant.
 
-A ${category.replace(/_/g, ' ')} was detected with these warning signs:
-- ${signalList}
+THREAT ANALYSIS:
+- Scam Type: ${category.replace(/_/g, ' ')}
+- Warning Signals Detected:
+  - ${signalList}${financialContext}${platformUsed}
 ${platformContext}
 
-Generate exactly 5 numbered safety steps in ${language === 'hindi' ? 'Hindi (Devanagari script)' : language === 'tamil' ? 'Tamil script' : 'simple English'}.
-Steps must be specific to India. Include exact helpline numbers where relevant.
-Format: You MUST provide EXACTLY 5 distinct steps. Each step must start with a number and a period (e.g., 1., 2.) and be on its OWN NEW LINE.
-1. [First Step]
-2. [Second Step]
-3. [Third Step]
-4. [Fourth Step]
-5. [Fifth Step]
-Keep each step under 2 sentences. No markdown. No headers. No introductory text. Just the 5 steps.`;
+Generate exactly 5 numbered prevention steps in ${langInstruction}.
+Be India-specific. Include exact helpline numbers where relevant.
+
+CRITICAL FORMAT RULES:
+- EXACTLY 5 steps, each on its OWN NEW LINE
+- Start each with: 1. 2. 3. etc.
+- Maximum 2 sentences per step
+- No markdown, no headers, no intro text
+
+1. [Do NOT do this — immediate safety action]
+2. [Block/Report the sender]
+3. [Protect your financial accounts]
+4. [Report to authorities — include helpline number]
+5. [Protect your personal data]`;
 };
 
 /**
  * Call Gemini API and return structured steps
  */
-const getAISteps = async (category, signals, language = 'english', mode = 'prevention') => {
+const getAISteps = async (category, signals, language = 'english', mode = 'prevention', context = {}) => {
   const apiKey = process.env.GEMINI_API_KEY;
 
   if (!apiKey) {
@@ -95,7 +120,7 @@ const getAISteps = async (category, signals, language = 'english', mode = 'preve
   }
 
   try {
-    const prompt = buildPrompt(category, signals, language, mode);
+    const prompt = buildPrompt(category, signals, language, mode, context);
 
     const response = await axios.post(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${apiKey.trim()}`,

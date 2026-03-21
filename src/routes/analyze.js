@@ -73,16 +73,17 @@ async function maybePersistAnalysis({ content, result, type, aiSteps, req }) {
 // ─── POST /api/analyze ───────────────────────────────────────────────────────
 router.post('/', async (req, res) => {
   try {
-    const { type, content } = req.body;
+    const { type, content, platform, amountLost } = req.body;
     if (!content) return res.status(400).json({ error: 'Content is required' });
 
     // 1. Run ML + rule-based detection
     const result = await analyzeInput(type, content);
 
-    // 2. Get Gemini AI steps (runs in parallel-ish, non-blocking for response)
+    // 2. Get Gemini AI steps with context (runs in parallel-ish, non-blocking for response)
     let aiSteps = null;
     if (['High', 'Critical', 'Medium'].includes(result.risk)) {
-      aiSteps = await getAISteps(result.category, result.signals, result.language, 'prevention');
+      const context = { platform, amountLost };
+      aiSteps = await getAISteps(result.category, result.signals, result.language, 'prevention', context);
     }
 
     // 3. Privacy-first DB persist (only for confirmed High/Critical scams with keywords)
