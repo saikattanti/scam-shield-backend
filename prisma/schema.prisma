@@ -7,8 +7,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // User model - supports both guest and authenticated users
@@ -23,11 +24,12 @@ model User {
   sessions      Session[]
   analyses      Analysis[]
   feedback      Feedback[]
+  scamReports   ScamReport[]
   
   @@map("users")
 }
 
-// Session model - manages user sessions with expiration
+// Session model - manages user sessions with expiration (auto-purge every 6h)
 model Session {
   id            String      @id @default(uuid())
   userId        String
@@ -44,13 +46,17 @@ model Session {
   @@map("sessions")
 }
 
-// Analysis model - stores scam analysis results with privacy (hashed content)
+// Analysis model - Privacy by Design:
+// - Full message NEVER stored
+// - Only stored when High/Critical risk detected AND scam keywords present
+// - contentHash (SHA-256) used for deduplication across the network
+// - Location is approximate only (50-70km scatter applied at write time)
 model Analysis {
   id              String      @id @default(uuid())
   userId          String
   sessionId       String
-  contentHash     String      @db.VarChar(64) // SHA-256 hash
-  contentPreview  String      @db.Text // First 100 chars for context
+  contentHash     String      @db.VarChar(64)   // SHA-256 hash - never the original content
+  contentPreview  String?     @db.VarChar(120)  // First 100 chars max, only if scam
   analysisType    String      @default("text")
   riskScore       Float
   riskLevel       String
@@ -58,7 +64,14 @@ model Analysis {
   language        String      @default("en")
   mlPowered       Boolean     @default(true)
   aiConfidence    Float?
-  signals         Json?       // Store warning_signals array as JSON
+  signals         Json?                          // Warning signals array
+  aiSteps         String?     @db.Text           // Gemini-generated recovery steps
+  // Privacy-safe approximate location (50-70km scatter applied, never exact)
+  approxLat       Float?
+  approxLng       Float?
+  approxRegion    String?     @db.VarChar(100)
+  // Why this was stored (journaling for auditors)
+  storedReason    String?     @db.VarChar(200)
   createdAt       DateTime    @default(now())
   
   user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -67,7 +80,8 @@ model Analysis {
   
   @@index([contentHash])
   @@index([createdAt])
-  @@index([userId])
+  @@index([riskLevel])
+  @@index([approxRegion])
   @@map("analyses")
 }
 
@@ -87,3 +101,30 @@ model Feedback {
   @@map("feedback")
 }
 
+// ScamReport model - "I Got Scammed" recovery submissions
+// Privacy: no full message stored, only category + approx location + AI recovery steps
+model ScamReport {
+  id              String      @id @default(uuid())
+  userId          String?
+  contentHash     String?     @db.VarChar(64)   // Hash of situation description
+  scamCategory    String                          // Detected scam type
+  platformUsed    String?     @db.VarChar(100)  // e.g. "PhonePe", "Paytm", "WhatsApp"
+  amountLost      Float?                          // Reported amount (optional)
+  currency        String      @default("INR")
+  language        String      @default("en")
+  // AI-generated step-by-step recovery plan
+  recoverySteps   String      @db.Text
+  // Approximate location only
+  approxLat       Float?
+  approxLng       Float?
+  approxRegion    String?     @db.VarChar(100)
+  resolved        Boolean     @default(false)
+  createdAt       DateTime    @default(now())
+  
+  user            User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  
+  @@index([scamCategory])
+  @@index([createdAt])
+  @@index([approxRegion])
+  @@map("scam_reports")
+}

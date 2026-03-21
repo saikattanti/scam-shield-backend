@@ -118,7 +118,11 @@ const deepAnalyzeUrl = async (url) => {
             signals.push(`⚠️ Could not fully load site in sandbox (It may be offline or blocking crawlers).`);
         } finally {
             if (browser) {
-                await browser.close();
+                try {
+                    await browser.close();
+                } catch (closeErr) {
+                    console.log(`  -> Warning: Sandbox cleanup error ignored: ${closeErr.message}`);
+                }
             }
         }
 
