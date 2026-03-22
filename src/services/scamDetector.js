@@ -254,12 +254,19 @@ const analyzeInput = async (type, content) => {
     else if (score >= 20) risk = "Medium";
     else risk = "Low";
 
-    // Get category from ML or determine from signals
-    const category = mlResult?.scam_category || determineCategory(signals, lowerContent, mlResult);
+    // Final Categorization Choice
+    let category = "Legitimate";
+    if (score >= 20) {
+        // High confidence in scam category from ML or rule patterns
+        category = mlResult?.scam_category || determineCategory(signals, lowerContent, mlResult);
+    } else if (urls.length > 0 && score > 0) {
+        category = "General_Suspicious_Activity";
+    }
     
     // Override category if deep scan picked up severe phishing
     if (isDeepScanned && linkRiskScore > 40) {
         risk = "Critical";
+        category = "Phishing_Identity_Theft";
     }
 
     // Get appropriate recommendation based on language
