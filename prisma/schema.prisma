@@ -1,8 +1,5 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
   previewFeatures = ["driverAdapters"]
 }
 
@@ -12,72 +9,60 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-// User model - supports both guest and authenticated users
 model User {
-  id            String      @id @default(uuid())
-  email         String?     @unique
-  passwordHash  String?
-  isGuest       Boolean     @default(true)
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
-  
-  sessions      Session[]
-  analyses      Analysis[]
-  feedback      Feedback[]
-  scamReports   ScamReport[]
-  
+  id           String       @id @default(uuid())
+  email        String?      @unique
+  passwordHash String?
+  isGuest      Boolean      @default(true)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  analyses     Analysis[]
+  feedback     Feedback[]
+  scamReports  ScamReport[]
+  sessions     Session[]
+
   @@map("users")
 }
 
-// Session model - manages user sessions with expiration (auto-purge every 6h)
 model Session {
-  id            String      @id @default(uuid())
-  userId        String
-  sessionKey    String      @unique
-  expiresAt     DateTime
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
-  
-  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  analyses      Analysis[]
-  
+  id         String     @id @default(uuid())
+  userId     String
+  sessionKey String     @unique
+  expiresAt  DateTime
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  analyses   Analysis[]
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([sessionKey])
   @@index([expiresAt])
   @@map("sessions")
 }
 
-// Analysis model - Privacy by Design:
-// - Full message NEVER stored
-// - Only stored when High/Critical risk detected AND scam keywords present
-// - contentHash (SHA-256) used for deduplication across the network
-// - Location is approximate only (50-70km scatter applied at write time)
 model Analysis {
-  id              String      @id @default(uuid())
-  userId          String
-  sessionId       String
-  contentHash     String      @db.VarChar(64)   // SHA-256 hash - never the original content
-  contentPreview  String?     @db.VarChar(120)  // First 100 chars max, only if scam
-  analysisType    String      @default("text")
-  riskScore       Float
-  riskLevel       String
-  category        String
-  language        String      @default("en")
-  mlPowered       Boolean     @default(true)
-  aiConfidence    Float?
-  signals         Json?                          // Warning signals array
-  aiSteps         String?     @db.Text           // Gemini-generated recovery steps
-  // Privacy-safe approximate location (50-70km scatter applied, never exact)
-  approxLat       Float?
-  approxLng       Float?
-  approxRegion    String?     @db.VarChar(100)
-  // Why this was stored (journaling for auditors)
-  storedReason    String?     @db.VarChar(200)
-  createdAt       DateTime    @default(now())
-  
-  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  session         Session     @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  feedback        Feedback[]
-  
+  id             String     @id @default(uuid())
+  userId         String
+  sessionId      String
+  contentHash    String     @db.VarChar(64)
+  contentPreview String?    @db.VarChar(120)
+  analysisType   String     @default("text")
+  riskScore      Float
+  riskLevel      String
+  category       String
+  language       String     @default("en")
+  mlPowered      Boolean    @default(true)
+  aiConfidence   Float?
+  signals        Json?
+  createdAt      DateTime   @default(now())
+  aiSteps        String?
+  approxLat      Float?
+  approxLng      Float?
+  approxRegion   String?    @db.VarChar(100)
+  storedReason   String?    @db.VarChar(200)
+  session        Session    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user           User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  feedback       Feedback[]
+
   @@index([contentHash])
   @@index([createdAt])
   @@index([riskLevel])
@@ -85,44 +70,37 @@ model Analysis {
   @@map("analyses")
 }
 
-// Feedback model - stores user feedback on analysis accuracy
 model Feedback {
-  id            String      @id @default(uuid())
-  analysisId    String
-  userId        String
-  isAccurate    Boolean
-  comment       String?     @db.Text
-  createdAt     DateTime    @default(now())
-  
-  analysis      Analysis    @relation(fields: [analysisId], references: [id], onDelete: Cascade)
-  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  id         String   @id @default(uuid())
+  analysisId String
+  userId     String
+  isAccurate Boolean
+  comment    String?
+  createdAt  DateTime @default(now())
+  analysis   Analysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([analysisId])
   @@map("feedback")
 }
 
-// ScamReport model - "I Got Scammed" recovery submissions
-// Privacy: no full message stored, only category + approx location + AI recovery steps
 model ScamReport {
-  id              String      @id @default(uuid())
-  userId          String?
-  contentHash     String?     @db.VarChar(64)   // Hash of situation description
-  scamCategory    String                          // Detected scam type
-  platformUsed    String?     @db.VarChar(100)  // e.g. "PhonePe", "Paytm", "WhatsApp"
-  amountLost      Float?                          // Reported amount (optional)
-  currency        String      @default("INR")
-  language        String      @default("en")
-  // AI-generated step-by-step recovery plan
-  recoverySteps   String      @db.Text
-  // Approximate location only
-  approxLat       Float?
-  approxLng       Float?
-  approxRegion    String?     @db.VarChar(100)
-  resolved        Boolean     @default(false)
-  createdAt       DateTime    @default(now())
-  
-  user            User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
-  
+  id            String   @id @default(uuid())
+  userId        String?
+  contentHash   String?  @db.VarChar(64)
+  scamCategory  String
+  platformUsed  String?  @db.VarChar(100)
+  amountLost    Float?
+  currency      String   @default("INR")
+  language      String   @default("en")
+  recoverySteps String
+  approxLat     Float?
+  approxLng     Float?
+  approxRegion  String?  @db.VarChar(100)
+  resolved      Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  user          User?    @relation(fields: [userId], references: [id])
+
   @@index([scamCategory])
   @@index([createdAt])
   @@index([approxRegion])

@@ -8,6 +8,8 @@ const path = require('path');
 const FormData = require('form-data');
 const { deepAnalyzeUrl } = require('./urlScanner');
 
+const ML_URL = process.env.ML_SERVICE_URL || 'http://localhost:8000';
+
 // Load multilingual keywords
 let multilingualKeywords = {};
 try {
@@ -52,7 +54,7 @@ const analyzeInput = async (type, content) => {
 
     // --- 1. AI Model Prediction (Primary) ---
     try {
-        const mlResponse = await axios.post('http://localhost:8000/analyze', 
+        const mlResponse = await axios.post(`${ML_URL}/analyze`, 
             { text: content, language: detectedLanguage },
             { timeout: 5000 }
         );
@@ -288,7 +290,7 @@ const analyzeImage = async (buffer, originalname) => {
             contentType: 'image/jpeg', // Default, multer will provide actual
         });
 
-        const mlResponse = await axios.post('http://localhost:8000/analyze-image', form, {
+        const mlResponse = await axios.post(`${ML_URL}/analyze-image`, form, {
             headers: {
                 ...form.getHeaders(),
             },
