@@ -236,21 +236,12 @@ const analyzeInput = async (type, content) => {
     // --- Final Scoring & Categorization ---
     score = Math.max(0, Math.min(score, 100));
 
-    // Determine risk level by taking the HIGHER of ML risk and Rule-based Risk
-    let ruleRisk = "Low";
-    if (score >= 80) ruleRisk = "Critical";
-    else if (score >= 50) ruleRisk = "High";
-    else if (score >= 20) ruleRisk = "Medium";
-
-    if (mlResult) {
-        const mlRisk = mlResult.risk_level || "Medium";
-        const riskLevels = { "Low": 1, "Medium": 2, "High": 3, "Critical": 4 };
-        
-        // Pick the most severe risk level
-        risk = riskLevels[mlRisk] > riskLevels[ruleRisk] ? mlRisk : ruleRisk;
-    } else {
-        risk = ruleRisk;
-    }
+    // Determine final risk level directly from the securely computed score
+    // (This includes the ML weight, rule engine, Sandbox, AND negative safe-word penalties)
+    if (score >= 80) risk = "Critical";
+    else if (score >= 50) risk = "High";
+    else if (score >= 20) risk = "Medium";
+    else risk = "Low";
 
     // Get category from ML or determine from signals
     const category = mlResult?.scam_category || determineCategory(signals, lowerContent, mlResult);
