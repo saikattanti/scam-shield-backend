@@ -95,7 +95,8 @@ const analyzeInput = async (type, content) => {
     );
 
     if (keywordMatches.length > 0) {
-        const keywordScore = Math.min(keywordMatches.length * 5, 15);
+        // Boosted weight from 15 to 40 because keywords are highly accurate for Indian scams
+        const keywordScore = Math.min(keywordMatches.length * 10, 40);
         score += keywordScore;
         signals.push(`${keywordMatches.length} suspicious keywords detected (${detectedLanguage})`);
     }
@@ -110,9 +111,11 @@ const analyzeInput = async (type, content) => {
         content.toLowerCase().includes(term.toLowerCase()) || content.includes(term)
     );
     
-    if (bankingMatches.length > 0 && keywordMatches.length > 0) {
-        score += 10;
-        signals.push(`Banking context with suspicious intent detected`);
+    if (bankingMatches.length > 0) {
+        // Boosted weight from 10 to 25
+        const bankScore = Math.min(bankingMatches.length * 8, 25);
+        score += bankScore;
+        signals.push(`Banking/Financial context detected (${detectedLanguage})`);
     }
 
     // --- 4. Urgency & Pressure Patterns (Weight: 10) ---
@@ -124,14 +127,15 @@ const analyzeInput = async (type, content) => {
         // Tamil patterns  
         /உடனடி/i, /இப்போது/i, /24 மணி/i,
         // Telugu patterns
-        /త్వరగా/i, /ఇప్పుడు/i, /24 గంటల్లో/i
+        /త్వரగా/i, /ఇప్పుడు/i, /24 గంటల్లో/i
     ];
     
     let urgencyDetected = urgencyPatterns.some(pattern => pattern.test(content));
 
     if (urgencyDetected) {
-        score += 10;
-        signals.push(`Urgency/pressure tactics detected in ${detectedLanguage}`);
+        // Boosted weight from 10 to 25
+        score += 25;
+        signals.push(`High urgency manipulation detected (${detectedLanguage})`);
     }
 
     // --- 5. Link & Domain Analysis (Weight: 15 / Or overrides if DeepScan) ---
@@ -197,8 +201,8 @@ const analyzeInput = async (type, content) => {
         // Cap higher if definitively deep scanned or explicitly requested URL analysis
         score += Math.min(linkRiskScore, 80); 
     } else {
-        // Keep regex caps low for text containing links
-        score += Math.min(linkRiskScore, 15);
+        // Boosted regex text-link max from 15 to 40
+        score += Math.min(linkRiskScore, 40);
     }
 
 
