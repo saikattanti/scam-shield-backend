@@ -74,8 +74,8 @@ router.get('/stream', async (req, res) => {
         // Send initial data
         res.write(`data: ${JSON.stringify({ type: 'connected', analyses: formattedAnalyses })}\n\n`);
     } catch (error) {
-        console.error('Error fetching recent analyses:', error);
-        res.write(`data: ${JSON.stringify({ type: 'error', message: 'Failed to load analyses' })}\n\n`);
+        console.warn('Ticker stream error (DB Skip):', error.message);
+        res.write(`data: ${JSON.stringify({ type: 'connected', analyses: [] })}\n\n`);
     }
 
     // Add client to the list
@@ -110,8 +110,8 @@ router.get('/recent', async (req, res) => {
 
         res.json(formattedAnalyses);
     } catch (error) {
-        console.error('Error fetching recent analyses:', error);
-        res.status(500).json({ error: 'Failed to fetch recent analyses' });
+        console.warn('Ticker recent error (DB Skip):', error.message);
+        res.json([]);
     }
 });
 
