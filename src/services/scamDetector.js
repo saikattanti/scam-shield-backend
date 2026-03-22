@@ -90,9 +90,12 @@ const analyzeInput = async (type, content) => {
         ...multilingualKeywords.suspiciousKeywords?.[detectedLanguage] || []
     ];
     
-    const keywordMatches = suspiciousKeywords.filter(word => 
-        content.toLowerCase().includes(word.toLowerCase()) || content.includes(word)
-    );
+    const escapeRegExp = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    
+    const keywordMatches = suspiciousKeywords.filter(word => {
+        const regex = new RegExp(`\\b${escapeRegExp(word)}\\b`, 'i');
+        return regex.test(content);
+    });
 
     if (keywordMatches.length > 0) {
         // Boosted weight from 15 to 40 because keywords are highly accurate for Indian scams
@@ -107,15 +110,31 @@ const analyzeInput = async (type, content) => {
         ...multilingualKeywords.bankingTerms?.[detectedLanguage] || []
     ];
     
-    const bankingMatches = bankingTerms.filter(term => 
-        content.toLowerCase().includes(term.toLowerCase()) || content.includes(term)
-    );
+    const bankingMatches = bankingTerms.filter(term => {
+        const regex = new RegExp(`\\b${escapeRegExp(term)}\\b`, 'i');
+        return regex.test(content);
+    });
     
-    if (bankingMatches.length > 0) {
+    // ONLY add banking context penalty if there are ACTUALLY suspicious keywords or urgency detected.
+    // Normal bank messages have banking terms, that doesn't make them scams.
+    if (bankingMatches.length > 0 && keywordMatches.length > 0) {
         // Boosted weight from 10 to 25
         const bankScore = Math.min(bankingMatches.length * 8, 25);
         score += bankScore;
         signals.push(`Banking/Financial context detected (${detectedLanguage})`);
+    }
+
+    // --- 3.5 Safe Keywords / Legitimate Context Check (Negative Weight) ---
+    const safePatterns = [
+        /do not share/i, /never share/i, /official helpline/i, /toll-?free/i, 
+        /avoid late fees/i, /please pay on time/i, /nearest branch/i,
+        /kisi se share na karein/i, /kisi ko na bataye/i
+    ];
+    let safeDetected = safePatterns.filter(pattern => pattern.test(content));
+    if (safeDetected.length > 0) {
+        // Legit bank messages contain protective language. Deduct heavily to counter false-positive ML models.
+        score -= safeDetected.length * 20;
+        signals.push(`Protective/Legitimate phrasing detected. Flagging as likely Safe.`);
     }
 
     // --- 4. Urgency & Pressure Patterns (Weight: 10) ---
@@ -215,7 +234,7 @@ const analyzeInput = async (type, content) => {
     }
 
     // --- Final Scoring & Categorization ---
-    score = Math.min(score, 100);
+    score = Math.max(0, Math.min(score, 100));
 
     // Determine risk level by taking the HIGHER of ML risk and Rule-based Risk
     let ruleRisk = "Low";
