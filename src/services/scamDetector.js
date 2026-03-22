@@ -135,7 +135,8 @@ const analyzeInput = async (type, content) => {
     }
 
     // --- 5. Link & Domain Analysis (Weight: 15 / Or overrides if DeepScan) ---
-    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    // Improved regex to catch urls with OR without http://
+    const urlRegex = /([a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+(?:\/[^\s]*)?)/g;
     const urls = content.match(urlRegex) || [];
 
     const suspiciousDomains = ['bit.ly', 'tinyurl.com', 'ngrok.io', 'is.gd', 't.co', 'goo.gl', 'tiny.cc'];
