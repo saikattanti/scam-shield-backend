@@ -98,10 +98,19 @@ const analyzeInput = async (type, content) => {
     });
 
     if (keywordMatches.length > 0) {
-        // Boosted weight from 15 to 40 because keywords are highly accurate for Indian scams
-        const keywordScore = Math.min(keywordMatches.length * 10, 40);
+        // Distinguish between critical threats and generic "Dear Customer" greetings
+        const hasCriticalThreat = keywordMatches.some(k => !['dear customer', 'valuable customer'].includes(k.toLowerCase()));
+        
+        let keywordScore = 0;
+        if (hasCriticalThreat) {
+            keywordScore = Math.min(keywordMatches.length * 10, 40);
+        } else {
+            // Very low penalty for generic greetings (only +3 points)
+            keywordScore = 3;
+        }
+        
         score += keywordScore;
-        signals.push(`${keywordMatches.length} suspicious keywords detected (${detectedLanguage})`);
+        signals.push(`${keywordMatches.length} suspicious patterns detected (${detectedLanguage})`);
     }
 
     // --- 3. Banking Terms Check (Weight: 10) ---
@@ -128,13 +137,15 @@ const analyzeInput = async (type, content) => {
     const safePatterns = [
         /do not share/i, /never share/i, /official helpline/i, /toll-?free/i, 
         /avoid late fees/i, /please pay on time/i, /nearest branch/i,
-        /kisi se share na karein/i, /kisi ko na bataye/i
+        /kisi se share na karein/i, /kisi ko na bataye/i, /visit your branch/i,
+        /card ending \d{4}/i, /not share otp/i, /never ask for otp/i
     ];
     let safeDetected = safePatterns.filter(pattern => pattern.test(content));
     if (safeDetected.length > 0) {
-        // Legit bank messages contain protective language. Deduct heavily to counter false-positive ML models.
-        score -= safeDetected.length * 20;
-        signals.push(`Protective/Legitimate phrasing detected. Flagging as likely Safe.`);
+        // Legit bank messages contain protective language. Deduct AGGRESSIVELY.
+        // If it looks like a real bank message, we want to drop the score to 0 or near 0.
+        score -= safeDetected.length * 25;
+        signals.push(`Protective/Legitimate phrasing detected. Standard Bank Security warning identified.`);
     }
 
     // --- 4. Urgency & Pressure Patterns (Weight: 10) ---
