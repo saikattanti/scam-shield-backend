@@ -242,7 +242,12 @@ const analyzeInput = async (type, content) => {
     } else if (risk === "Medium") {
         recommendation = recommendations.medium || "Be cautious. Verify source independently.";
     } else {
-        recommendation = recommendations.low || "Seems safe, but always verify sender.";
+        // More intelligent low-risk message based on context
+        if (urls.length > 0) {
+            recommendation = recommendations.low || "Seems safe, but always verify sender before clicking links.";
+        } else {
+            recommendation = "This message appears completely safe and normal. No suspicious patterns detected.";
+        }
     }
 
     return {
