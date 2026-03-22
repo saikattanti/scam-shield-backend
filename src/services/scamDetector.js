@@ -213,16 +213,20 @@ const analyzeInput = async (type, content) => {
     // --- Final Scoring & Categorization ---
     score = Math.min(score, 100);
 
-    // Determine risk level with ML-informed thresholds
+    // Determine risk level by taking the HIGHER of ML risk and Rule-based Risk
+    let ruleRisk = "Low";
+    if (score >= 80) ruleRisk = "Critical";
+    else if (score >= 50) ruleRisk = "High";
+    else if (score >= 20) ruleRisk = "Medium";
+
     if (mlResult) {
-        // Use ML risk level if available
-        risk = mlResult.risk_level || "Medium";
+        const mlRisk = mlResult.risk_level || "Medium";
+        const riskLevels = { "Low": 1, "Medium": 2, "High": 3, "Critical": 4 };
+        
+        // Pick the most severe risk level
+        risk = riskLevels[mlRisk] > riskLevels[ruleRisk] ? mlRisk : ruleRisk;
     } else {
-        // Fallback to score-based risk
-        if (score >= 80) risk = "Critical";
-        else if (score >= 50) risk = "High";
-        else if (score >= 20) risk = "Medium";
-        else risk = "Low";
+        risk = ruleRisk;
     }
 
     // Get category from ML or determine from signals
